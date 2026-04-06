@@ -309,10 +309,12 @@ async def download_audio(project_id: str, page_id: str):
     page = _page_or_404(project, page_id)
     if not page.tts_path or not Path(page.tts_path).exists():
         raise HTTPException(status_code=404, detail="音声ファイルが見つかりません。先に TTS を実行してください。")
+    ext = Path(page.tts_path).suffix.lower()
+    media_type = "audio/wav" if ext == ".wav" else "audio/mpeg"
     return FileResponse(
         path=page.tts_path,
-        media_type="audio/mpeg",
-        filename=f"{project.title}_{page.order:04d}.mp3",
+        media_type=media_type,
+        filename=f"{project.title}_{page.order:04d}{ext}",
     )
 
 
@@ -394,6 +396,23 @@ async def drive_status():
         "configured": drive_service.is_configured(),
         "message": "Google Drive が設定済みです" if drive_service.is_configured()
                    else "Drive 未設定（モック保存モード）。credentials/client_secret.json を配置してください。",
+    }
+
+
+# ─────────────────────────────────────────────
+# AivisSpeech ステータス
+# ─────────────────────────────────────────────
+
+@app.get("/tts/status")
+async def tts_status():
+    running = tts_service.is_aivis_running()
+    speakers = tts_service.get_speakers() if running else []
+    return {
+        "engine": "aivis" if running else "gtts",
+        "aivis_running": running,
+        "speakers": speakers,
+        "message": "AivisSpeech 接続済み" if running
+                   else "AivisSpeech 未起動（gTTS フォールバック）。AivisSpeech を起動してください。",
     }
 
 
