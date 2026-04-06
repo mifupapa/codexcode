@@ -80,14 +80,14 @@ if not exist "%ROOT%\.env" (
 
 echo [3/3] Starting server...
 echo.
-echo Open your browser at: http://127.0.0.1:8000
+echo Open your browser at: http://127.0.0.1:8080
 echo Close this window to stop the app.
 echo ================================================
 
-start "" cmd /c "timeout /t 3 >nul && start http://127.0.0.1:8000"
+start "" cmd /c "timeout /t 3 >nul && start http://127.0.0.1:8080"
 
 cd /d "%ROOT%"
-"%ROOT%\.venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+"%ROOT%\.venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload
 
 popd
 pause
