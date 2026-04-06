@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookVoice OCR Studio</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header>
+  <span style="font-size:1.5rem">📖</span>
+  <h1>BookVoice OCR Studio</h1>
+  <span class="version">v1.0</span>
+  <span style="flex:1"></span>
+  <span id="drive-status" class="drive-status off">Drive 未設定</span>
+</header>
+
+<!-- メインレイアウト -->
+<div class="app-layout">
+
+  <!-- サイドバー：プロジェクト一覧 -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>📁 プロジェクト</h2>
+      <button class="btn btn-primary btn-sm" id="btn-new-project">＋ 新規</button>
+    </div>
+    <div id="project-list">
+      <div class="empty-state" style="padding:20px"><p>読み込み中...</p></div>
+    </div>
+  </aside>
+
+  <!-- メインエリア -->
+  <div class="main">
+
+    <!-- ツールバー -->
+    <div class="toolbar">
+      <span class="project-title-display" id="project-title-display">プロジェクトを選択してください</span>
+      <button class="btn btn-primary btn-sm" id="btn-ocr-all" disabled>全ページ OCR</button>
+      <button class="btn btn-success btn-sm" id="btn-tts-all" disabled>全ページ TTS</button>
+      <button class="btn btn-warning btn-sm" id="btn-retry-errors" disabled>エラー再試行</button>
+      <button class="btn btn-ghost btn-sm" id="btn-drive-all" disabled>全て Drive 保存</button>
+      <button class="btn btn-danger btn-sm" id="btn-delete-project" disabled>削除</button>
+    </div>
+
+    <!-- ページエリア -->
+    <div class="page-area">
+      <!-- ドロップゾーン -->
+      <div class="drop-zone" id="drop-zone" style="display:none">
+        <p>📸 画像をここにドロップ</p>
+        <small>または クリックして選択（JPG, PNG, WEBP, TIFFなど）</small>
+        <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+      </div>
+
+      <!-- ページグリッド -->
+      <div class="page-grid" id="page-grid">
+        <div class="empty-state">
+          <div class="icon">📚</div>
+          <p>左のサイドバーからプロジェクトを選択するか<br>「＋ 新規」でプロジェクトを作成してください</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステータスバー -->
+    <div class="status-bar" id="status-bar">
+      <span>BookVoice OCR Studio へようこそ</span>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細パネル（右スライド） -->
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <h3 id="detail-page-num">ページ詳細</h3>
+    <button class="btn btn-ghost btn-sm" id="btn-close-detail">✕ 閉じる</button>
+  </div>
+  <div class="detail-body">
+    <img id="detail-image" class="detail-image" src="" alt="ページ画像">
+
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <span style="font-size:0.82rem;color:#6b7280">OCR:</span>
+      <span id="ocr-status-label" class="badge badge-gray">未処理</span>
+      <span style="font-size:0.82rem;color:#6b7280;margin-left:8px">TTS:</span>
+      <span id="tts-status-label" class="badge badge-gray">未処理</span>
+    </div>
+
+    <div id="detail-error" class="error-msg" style="display:none"></div>
+
+    <div style="margin:12px 0 6px;font-size:0.85rem;font-weight:600;color:#374151">
+      OCR テキスト（編集可能）
+    </div>
+    <textarea class="ocr-text-area" id="detail-ocr-text" placeholder="OCR を実行するとテキストが表示されます"></textarea>
+  </div>
+  <div class="detail-actions">
+    <button class="btn btn-primary" id="btn-run-ocr">OCR 実行</button>
+    <button class="btn btn-ghost" id="btn-save-text">テキスト保存</button>
+    <button class="btn btn-success" id="btn-run-tts">TTS 実行</button>
+    <button class="btn btn-ghost" id="btn-download-audio" disabled>音声DL</button>
+    <button class="btn btn-ghost" id="btn-upload-drive" disabled>Drive 保存</button>
+    <button class="btn btn-danger btn-sm" id="btn-delete-page">削除</button>
+  </div>
+</div>
+
+<!-- モーダル：新規プロジェクト -->
+<div class="modal-overlay" id="modal-new-project">
+  <div class="modal">
+    <h2>📖 新規プロジェクト</h2>
+    <form id="form-new-project">
+      <div class="form-group">
+        <label for="new-title">書名 <span style="color:red">*</span></label>
+        <input type="text" id="new-title" placeholder="例：吾輩は猫である" required>
+      </div>
+      <div class="form-group">
+        <label for="new-author">著者名</label>
+        <input type="text" id="new-author" placeholder="例：夏目漱石">
+      </div>
+      <div class="form-group">
+        <label for="new-language">言語</label>
+        <select id="new-language">
+          <option value="ja">日本語（縦書き対応）</option>
+          <option value="en">English</option>
+          <option value="zh">中文</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btn-cancel-project">キャンセル</button>
+        <button type="submit" class="btn btn-primary">作成</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- トースト通知コンテナ -->
+<div id="toast-container"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
