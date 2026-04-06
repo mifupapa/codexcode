@@ -1,75 +1,93 @@
 @echo off
-chcp 65001 > nul
 title BookVoice OCR Studio
 
 echo ================================================
-echo   BookVoice OCR Studio を起動しています...
+echo   BookVoice OCR Studio - Starting...
 echo ================================================
 echo.
 
-:: スクリプトのあるディレクトリの親（プロジェクトルート）へ移動
-cd /d "%~dp0.."
+pushd "%~dp0.."
+set "ROOT=%CD%"
 
-:: Python の確認
-python --version > nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [エラー] Python が見つかりません。
-    echo Python 3.11 以上をインストールしてください。
-    echo https://www.python.org/downloads/
+:: Try to find Python (python, py launcher, or common install paths)
+set "PYTHON="
+python --version >nul 2>&1 && set "PYTHON=python"
+if not defined PYTHON (
+    py --version >nul 2>&1 && set "PYTHON=py"
+)
+if not defined PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
+        set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    )
+)
+if not defined PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+        set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    )
+)
+if not defined PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" (
+        set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
+    )
+)
+if not defined PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (
+        set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+    )
+)
+if not defined PYTHON (
+    if exist "C:\Python311\python.exe" set "PYTHON=C:\Python311\python.exe"
+)
+if not defined PYTHON (
+    echo [ERROR] Python not found.
+    echo Please install Python 3.11+ from https://www.python.org/downloads/
+    echo Check "Add Python to PATH" when installing.
+    popd
     pause
     exit /b 1
 )
+echo [OK] Python found: %PYTHON%
 
-:: 仮想環境の作成（初回のみ）
-if not exist ".venv" (
-    echo [1/3] 仮想環境を作成しています...
-    python -m venv .venv
+:: Create venv if not exists
+if not exist "%ROOT%\.venv\Scripts\python.exe" (
+    echo [1/3] Creating virtual environment...
+    "%PYTHON%" -m venv "%ROOT%\.venv"
     if %ERRORLEVEL% neq 0 (
-        echo [エラー] 仮想環境の作成に失敗しました。
+        echo [ERROR] Failed to create virtual environment.
+        popd
         pause
         exit /b 1
     )
 )
 
-:: 仮想環境を有効化
-call .venv\Scripts\activate.bat
-
-:: 依存パッケージのインストール（初回 or 更新時）
-echo [2/3] 必要なパッケージを確認しています...
-pip install -r requirements.txt -q --disable-pip-version-check
+:: Install packages
+echo [2/3] Checking packages...
+"%ROOT%\.venv\Scripts\pip.exe" install -r "%ROOT%\requirements.txt" -q --disable-pip-version-check
 if %ERRORLEVEL% neq 0 (
-    echo [エラー] パッケージのインストールに失敗しました。
-    echo インターネット接続を確認してください。
+    echo [ERROR] Failed to install packages.
+    popd
     pause
     exit /b 1
 )
 
-:: .env ファイルのコピー（初回のみ）
-if not exist ".env" (
-    if exist ".env.example" (
-        copy ".env.example" ".env" > nul
-        echo [情報] .env ファイルを作成しました。必要に応じて編集してください。
-    )
+:: Create data dirs and .env
+if not exist "%ROOT%\data\projects" mkdir "%ROOT%\data\projects"
+if not exist "%ROOT%\data\mock_drive" mkdir "%ROOT%\data\mock_drive"
+if not exist "%ROOT%\credentials" mkdir "%ROOT%\credentials"
+if not exist "%ROOT%\.env" (
+    if exist "%ROOT%\.env.example" copy "%ROOT%\.env.example" "%ROOT%\.env" >nul
 )
 
-:: データディレクトリの作成
-if not exist "data\projects" mkdir "data\projects"
-if not exist "data\mock_drive" mkdir "data\mock_drive"
-if not exist "credentials" mkdir "credentials"
-
-:: ブラウザで開く（サーバー起動後に自動オープン）
-echo [3/3] アプリを起動しています...
+echo [3/3] Starting server...
 echo.
-echo ブラウザが自動で開きます。開かない場合は以下を開いてください:
-echo   http://127.0.0.1:8000
-echo.
-echo 終了するには このウィンドウを閉じるか Ctrl+C を押してください。
+echo Open your browser at: http://127.0.0.1:8000
+echo Close this window to stop the app.
 echo ================================================
 
-:: 少し待ってからブラウザを開く
-start "" cmd /c "timeout /t 2 > nul && start http://127.0.0.1:8000"
+start "" cmd /c "timeout /t 3 >nul && start http://127.0.0.1:8000"
 
-:: FastAPI サーバーを起動
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+cd /d "%ROOT%"
+"%ROOT%\.venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
+popd
 pause

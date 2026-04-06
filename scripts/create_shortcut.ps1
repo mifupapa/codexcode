@@ -7,7 +7,7 @@ $WshShell = New-Object -ComObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
 
 $Shortcut.TargetPath       = "cmd.exe"
-$Shortcut.Arguments        = "/c `"$ScriptPath`""
+$Shortcut.Arguments        = "/k `"$ScriptPath`""
 $Shortcut.WorkingDirectory = $ProjectRoot
 $Shortcut.Description      = "BookVoice OCR Studio"
 $Shortcut.WindowStyle      = 1
