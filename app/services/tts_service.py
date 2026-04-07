@@ -6,12 +6,14 @@ from __future__ import annotations
 import io
 import json
 import os
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 AIVIS_HOST = os.getenv("AIVIS_HOST", "http://127.0.0.1:10101")
-AIVIS_SPEAKER = int(os.getenv("AIVIS_SPEAKER", "0"))  # style_id
+AIVIS_SPEAKER = os.getenv("AIVIS_SPEAKER", "")  # style_id (auto-detect if empty)
+_cached_speaker_id: int | None = None
 
 
 def run_tts(text: str, output_path: str | Path, language: str = "ja") -> str:
@@ -33,23 +35,32 @@ def run_tts(text: str, output_path: str | Path, language: str = "ja") -> str:
 # AivisSpeech (VOICEVOX-compatible API)
 # ──────────────────────────────────────────────
 
-def _aivis_tts(text: str, output_path: str | Path) -> str:
-    speaker = AIVIS_SPEAKER
+def _get_speaker_id() -> int:
+    """Get speaker ID: from env, cache, or auto-detect first available."""
+    global _cached_speaker_id
+    if AIVIS_SPEAKER:
+        return int(AIVIS_SPEAKER)
+    if _cached_speaker_id is not None:
+        return _cached_speaker_id
+    speakers = get_speakers()
+    if speakers and speakers[0].get("styles"):
+        _cached_speaker_id = speakers[0]["styles"][0]["id"]
+        return _cached_speaker_id
+    return 0
 
-    # Step 1: audio_query
-    url_query = f"{AIVIS_HOST}/audio_query?speaker={speaker}"
-    req1 = urllib.request.Request(
-        url_query,
-        data=json.dumps(text).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+
+def _aivis_tts(text: str, output_path: str | Path) -> str:
+    speaker = _get_speaker_id()
+
+    # Step 1: audio_query (text goes as query parameter, not body)
+    encoded_text = urllib.parse.quote(text, safe="")
+    url_query = f"{AIVIS_HOST}/audio_query?text={encoded_text}&speaker={speaker}"
+    req1 = urllib.request.Request(url_query, data=b"", method="POST")
     try:
         resp1 = urllib.request.urlopen(req1, timeout=30)
-    except urllib.error.URLError:
+    except urllib.error.URLError as e:
         raise RuntimeError(
-            "AivisSpeech Engine is not running. "
-            "Start AivisSpeech first, then retry."
+            f"AivisSpeech Engine connection failed: {e}"
         )
     audio_query = json.loads(resp1.read())
 
